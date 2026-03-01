@@ -1,10 +1,10 @@
-"""
-DineQR Backend — Django Settings
-"""
+"""DineQR Backend — Django Settings"""
 import os
 from pathlib import Path
 from datetime import timedelta
+
 from dotenv import load_dotenv
+import dj_database_url
 
 load_dotenv()
 
@@ -70,26 +70,35 @@ TEMPLATES = [
 WSGI_APPLICATION = 'backend.wsgi.application'
 ASGI_APPLICATION = 'backend.asgi.application'
 
-# ─── DATABASE ─────────────────────────────────────────────────
+
+# ─── DATABASE (Supabase via DATABASE_URL) ────────────────────
+
+# If DATABASE_URL is not explicitly set, try to construct it from
+# SUPABASE_* environment variables for convenience.
+supabase_host = os.getenv('SUPABASE_HOST')
+default_db_url = None
+if supabase_host:
+    supabase_user = os.getenv('SUPABASE_USER', 'postgres')
+    supabase_password = os.getenv('SUPABASE_PASSWORD', '')
+    supabase_db = os.getenv('SUPABASE_DB', 'postgres')
+    supabase_port = os.getenv('SUPABASE_PORT', '5432')
+    default_db_url = (
+        f"postgresql://{supabase_user}:{supabase_password}"
+        f"@{supabase_host}:{supabase_port}/{supabase_db}"
+    )
+
+DATABASE_URL = os.getenv('DATABASE_URL', default_db_url)
+
+if not DATABASE_URL:
+    raise RuntimeError('DATABASE_URL or SUPABASE_* environment variables must be set')
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.parse(
+        DATABASE_URL,
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
-
-# For production, use PostgreSQL:
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'dineqr',
-#         'USER': 'dineqr_user',
-#         'PASSWORD': 'your_password',
-#         'HOST': 'localhost',
-#         'PORT': '5432',
-#     }
-# }
 
 # ─── AUTH ─────────────────────────────────────────────────────
 
@@ -130,14 +139,13 @@ CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL', 'True') == 'True'
 
 # ─── CHANNELS (WebSocket) ────────────────────────────────────
 
+REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
-        # For production with Redis:
-        # 'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        # 'CONFIG': {
-        #     'hosts': [os.getenv('REDIS_URL', 'redis://localhost:6379/0')],
-        # },
+        'BACKEND': 'channels_redis.core.RedisChannelLayer' if 'redis' in REDIS_URL else 'channels.layers.InMemoryChannelLayer',
+        'CONFIG': {
+            'hosts': [REDIS_URL],
+        } if 'redis' in REDIS_URL else {},
     },
 }
 

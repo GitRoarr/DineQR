@@ -2,14 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/constants/app_constants.dart';
+import '../../providers/app_providers.dart';
 
 class AdminDashboardScreen extends ConsumerWidget {
   const AdminDashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final analyticsAsync = ref.watch(adminDashboardProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -26,81 +30,93 @@ class AdminDashboardScreen extends ConsumerWidget {
               child: const Icon(Icons.admin_panel_settings, color: AppColors.background, size: 18),
             ),
             const SizedBox(width: 10),
-            const Text('Admin Panel'),
+            Text('Managment Console', style: GoogleFonts.playfairDisplay(fontWeight: FontWeight.w700)),
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: () => ref.invalidate(adminDashboardProvider),
+          ),
           IconButton(
             icon: const Icon(Icons.logout_rounded),
             onPressed: () => context.go('/login'),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Welcome
-            const Text(
-              'Dashboard',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-              ),
-            ).animate().fadeIn().slideX(begin: -0.05),
-            const SizedBox(height: 4),
-            const Text(
-              'Manage your restaurant',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-            ).animate().fadeIn(delay: 100.ms),
+      body: analyticsAsync.when(
+        data: (data) {
+          if (data == null) return const Center(child: Text('Failed to load analytics'));
 
-            const SizedBox(height: 24),
+          final today = data['today'] ?? {};
+          final weekly = data['weekly'] ?? {};
+          final popular = data['popular_items'] as List? ?? [];
 
-            // Stats grid
-            _buildStatsGrid(),
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Dashboard',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ).animate().fadeIn().slideX(begin: -0.05),
+                const SizedBox(height: 4),
+                const Text(
+                  'Manage your restaurant operations',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                ).animate().fadeIn(delay: 100.ms),
 
-            const SizedBox(height: 28),
+                const SizedBox(height: 24),
 
-            // Quick actions
-            const Text(
-              'Quick Actions',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+                _buildStatsGrid(today, data['total_tables'] ?? 15),
+
+                const SizedBox(height: 28),
+
+                const Text(
+                  'Quick Actions',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                _buildActionGrid(context),
+
+                const SizedBox(height: 28),
+
+                const Text(
+                  'Performance Summary',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildSummaryCards(weekly, popular),
+              ],
             ),
-            const SizedBox(height: 16),
-
-            _buildActionGrid(context),
-
-            const SizedBox(height: 28),
-
-            // Recent orders
-            const Text(
-              'Today\'s Summary',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            _buildSummaryCards(),
-          ],
-        ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold)),
+        error: (e, _) => Center(child: Text('Error: $e')),
       ),
     );
   }
 
-  Widget _buildStatsGrid() {
+  Widget _buildStatsGrid(Map<dynamic, dynamic> today, int totalTables) {
     final stats = [
-      _Stat('Revenue', '12,540 ${AppConstants.currency}', Icons.monetization_on_rounded, AppColors.gold),
-      _Stat('Orders', '47', Icons.receipt_long_rounded, AppColors.success),
-      _Stat('Active Tables', '8/15', Icons.table_restaurant, AppColors.info),
-      _Stat('Pending', '3', Icons.pending_actions_rounded, AppColors.pending),
+      _Stat('Today Revenue', '${today['revenue']?.toStringAsFixed(0)} ${AppConstants.currency}', Icons.monetization_on_rounded, AppColors.gold),
+      _Stat('Today Orders', '${today['orders']}', Icons.receipt_long_rounded, AppColors.success),
+      _Stat('Active Tables', '${today['active_tables']}/$totalTables', Icons.table_restaurant, AppColors.info),
+      _Stat('Pending Orders', '${today['pending_orders']}', Icons.pending_actions_rounded, AppColors.pending),
     ];
 
     return GridView.builder(
@@ -164,9 +180,9 @@ class AdminDashboardScreen extends ConsumerWidget {
       _Action('Menu Items', Icons.restaurant_menu_rounded, AppColors.gold, () => context.push('/admin/menu')),
       _Action('Categories', Icons.category_rounded, AppColors.info, () {}),
       _Action('Tables & QR', Icons.qr_code_rounded, AppColors.success, () {}),
-      _Action('Orders', Icons.receipt_rounded, AppColors.pending, () => context.push('/kitchen')),
+      _Action('Order View', Icons.receipt_rounded, AppColors.pending, () => context.push('/kitchen')),
       _Action('Analytics', Icons.bar_chart_rounded, AppColors.goldLight, () {}),
-      _Action('Staff', Icons.people_rounded, AppColors.served, () {}),
+      _Action('Settings', Icons.settings_rounded, AppColors.textHint, () {}),
     ];
 
     return GridView.builder(
@@ -219,14 +235,17 @@ class AdminDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSummaryCards() {
+  Widget _buildSummaryCards(Map<dynamic, dynamic> weekly, List<dynamic> popular) {
+    final topItem = popular.isNotEmpty ? popular[0]['menu_item__name'] : 'N/A';
+    final topCount = popular.isNotEmpty ? popular[0]['total_ordered'] : 0;
+
     return Column(
       children: [
-        _summaryRow('Most ordered', 'Classic Burger', '23 orders', Icons.trending_up_rounded, AppColors.gold),
+        _summaryRow('Most ordered this week', topItem, '$topCount orders', Icons.trending_up_rounded, AppColors.gold),
         const SizedBox(height: 8),
-        _summaryRow('Peak hour', '12:00 - 1:00 PM', '18 orders', Icons.access_time_rounded, AppColors.info),
+        _summaryRow('Weekly Revenue', '${weekly['revenue']?.toStringAsFixed(0)} ${AppConstants.currency}', 'Last 7 days', Icons.monetization_on_rounded, AppColors.success),
         const SizedBox(height: 8),
-        _summaryRow('Avg order value', '265 ${AppConstants.currency}', '+12% vs yesterday', Icons.show_chart_rounded, AppColors.success),
+        _summaryRow('Popular Category', 'Ethiopian', '85% positive', Icons.stars_rounded, AppColors.info),
       ],
     );
   }

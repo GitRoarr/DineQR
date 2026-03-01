@@ -7,8 +7,11 @@ __pycache__/
 dist/
 build/
 venv/
+.venv/
 env/
 .env
+.env.*
+!.env.example
 
 # Django
 *.sqlite3
@@ -40,12 +43,13 @@ frontend/ios/.symlinks/
 .DS_Store
 Thumbs.db
 
-# Docker
 docker-compose.override.yml
 
-# QR Codes output
 scripts/qr_codes/
 
-# Misc
 *.log
 *.bak
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/

@@ -1,6 +1,3 @@
-#!/bin/bash
-
-# Flutter Docker Helper Script
 # Run Flutter commands without installing Flutter SDK locally
 
 FLUTTER_IMAGE="cirrusci/flutter:stable"

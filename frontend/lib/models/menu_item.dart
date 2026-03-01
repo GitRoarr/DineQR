@@ -8,6 +8,8 @@ class MenuItem {
   final int categoryId;
   final String categoryName;
   final bool available;
+  final bool isPopular;
+  final int preparationTime;
 
   MenuItem({
     required this.id,
@@ -18,6 +20,8 @@ class MenuItem {
     required this.categoryId,
     this.categoryName = '',
     this.available = true,
+    this.isPopular = false,
+    this.preparationTime = 15,
   });
 
   factory MenuItem.fromJson(Map<String, dynamic> json) {
@@ -30,6 +34,8 @@ class MenuItem {
       categoryId: json['category'] ?? json['category_id'] ?? 0,
       categoryName: json['category_name'] ?? '',
       available: json['available'] ?? true,
+      isPopular: json['is_popular'] ?? false,
+      preparationTime: json['preparation_time'] ?? 15,
     );
   }
 

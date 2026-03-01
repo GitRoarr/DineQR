@@ -27,8 +27,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final total = ref.read(cartTotalProvider);
 
     final orderData = {
-      'table': tableId,
-      'total': total * 1.1, // with service charge
+      'table_id': tableId,
       'items': cart.map((e) => e.toJson()).toList(),
     };
 

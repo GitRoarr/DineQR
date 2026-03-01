@@ -64,9 +64,9 @@ class OrderItemData {
   factory OrderItemData.fromJson(Map<String, dynamic> json) {
     return OrderItemData(
       id: json['id'] ?? 0,
-      itemId: json['item'] ?? json['item_id'] ?? 0,
-      itemName: json['item_name'] ?? '',
-      itemPrice: (json['item_price'] ?? 0).toDouble(),
+      itemId: json['menu_item'] ?? 0,
+      itemName: json['menu_item_name'] ?? '',
+      itemPrice: (json['unit_price'] ?? 0).toDouble(),
       quantity: json['quantity'] ?? 1,
       notes: json['notes'] ?? '',
     );

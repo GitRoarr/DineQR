@@ -8,8 +8,8 @@ class AppConstants {
   static const String appVersion = '1.0.0';
 
   // API Configuration
-  static const String baseUrl = 'http://10.0.2.2:8000/api'; // Android emulator
-  static const String wsUrl = 'ws://10.0.2.2:8000/ws';
+  static const String baseUrl = 'http://localhost:8000/api';
+  static const String wsUrl = 'ws://localhost:8000/ws';
 
   // Storage Keys
   static const String tokenKey = 'auth_token';

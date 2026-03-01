@@ -13,7 +13,7 @@ import django
 
 # Setup Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
 django.setup()
 
 from django.contrib.auth import get_user_model
@@ -64,13 +64,13 @@ def seed():
 
     # --- Create Categories ---
     categories_data = [
-        {'name': 'Appetizers', 'icon': '🥗', 'description': 'Start your meal right', 'sort_order': 1},
-        {'name': 'Main Course', 'icon': '🍖', 'description': 'Hearty main dishes', 'sort_order': 2},
-        {'name': 'Pizza', 'icon': '🍕', 'description': 'Wood-fired pizzas', 'sort_order': 3},
-        {'name': 'Pasta', 'icon': '🍝', 'description': 'Fresh Italian pasta', 'sort_order': 4},
-        {'name': 'Desserts', 'icon': '🍰', 'description': 'Sweet endings', 'sort_order': 5},
-        {'name': 'Beverages', 'icon': '🍹', 'description': 'Refreshing drinks', 'sort_order': 6},
-        {'name': 'Ethiopian', 'icon': '🫓', 'description': 'Traditional Ethiopian dishes', 'sort_order': 7},
+        {'name': 'Appetizers', 'description': 'Start your meal right', 'sort_order': 1},
+        {'name': 'Main Course', 'description': 'Hearty main dishes', 'sort_order': 2},
+        {'name': 'Pizza', 'description': 'Wood-fired pizzas', 'sort_order': 3},
+        {'name': 'Pasta', 'description': 'Fresh Italian pasta', 'sort_order': 4},
+        {'name': 'Desserts', 'description': 'Sweet endings', 'sort_order': 5},
+        {'name': 'Beverages', 'description': 'Refreshing drinks', 'sort_order': 6},
+        {'name': 'Ethiopian', 'description': 'Traditional Ethiopian dishes', 'sort_order': 7},
     ]
 
     categories = {}

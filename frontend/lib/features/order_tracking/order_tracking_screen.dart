@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/widgets/shared_widgets.dart';
 import '../../providers/app_providers.dart';
+import '../../models/order.dart' as models;
 
 class OrderTrackingScreen extends ConsumerStatefulWidget {
   final int orderId;
@@ -16,8 +18,6 @@ class OrderTrackingScreen extends ConsumerStatefulWidget {
 }
 
 class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
-  String _currentStatus = 'pending';
-
   final List<_StatusStep> _steps = [
     _StatusStep(
       status: 'pending',
@@ -59,24 +59,30 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
     final socket = ref.read(socketServiceProvider);
     socket.onOrderStatusUpdate = (data) {
       if (data['order_id'] == widget.orderId) {
-        setState(() {
-          _currentStatus = data['status'] ?? _currentStatus;
-        });
+        // Invalidate to refresh the order details
+        ref.invalidate(orderProvider(widget.orderId));
       }
     };
   }
 
-  int get _currentStepIndex {
-    return _steps.indexWhere((s) => s.status == _currentStatus);
+  int _getStepIndex(String status) {
+    if (status == 'cancelled') return 0;
+    return _steps.indexWhere((s) => s.status == status);
   }
 
   @override
   Widget build(BuildContext context) {
+    final orderAsync = ref.watch(orderProvider(widget.orderId));
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Order #${widget.orderId}'),
+        title: Text('Order Tracking', style: GoogleFonts.playfairDisplay(fontWeight: FontWeight.w700)),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: () => ref.invalidate(orderProvider(widget.orderId)),
+          ),
           TextButton.icon(
             onPressed: () => context.go('/scan'),
             icon: const Icon(Icons.home_rounded, size: 18),
@@ -84,216 +90,125 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            // Big status icon
-            _buildStatusHeader(),
+      body: orderAsync.when(
+        data: (order) {
+          if (order == null) return const Center(child: Text('Order not found'));
+          
+          final currentIndex = _getStepIndex(order.status);
+          final currentStep = _steps[currentIndex.clamp(0, _steps.length - 1)];
 
-            const SizedBox(height: 40),
-
-            // Progress steps
-            _buildProgressSteps(),
-
-            const SizedBox(height: 40),
-
-            // Estimated time
-            GlassContainer(
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppColors.gold.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Icon(Icons.timer_rounded, color: AppColors.gold),
-                  ),
-                  const SizedBox(width: 16),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Estimated Time',
-                        style: TextStyle(color: AppColors.textHint, fontSize: 12),
-                      ),
-                      Text(
-                        '15-25 minutes',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ).animate().fadeIn(delay: 200.ms),
-
-            const SizedBox(height: 16),
-
-            // Table info
-            GlassContainer(
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppColors.gold.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Icon(Icons.table_restaurant, color: AppColors.gold),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Table',
-                        style: TextStyle(color: AppColors.textHint, fontSize: 12),
-                      ),
-                      Text(
-                        'Table ${ref.watch(currentTableProvider) ?? '?'}',
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ).animate().fadeIn(delay: 300.ms),
-
-            const SizedBox(height: 32),
-
-            // New order button
-            if (_currentStatus == 'served')
-              GoldButton(
-                text: 'Order Again',
-                icon: Icons.restart_alt_rounded,
-                onPressed: () {
-                  final tableId = ref.read(currentTableProvider);
-                  context.go('/menu?table=$tableId');
-                },
-              ).animate().fadeIn(delay: 400.ms),
-
-            // Call waiter button
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Waiter has been notified!'),
-                    backgroundColor: AppColors.surfaceLight,
-                  ),
-                );
-              },
-              icon: const Icon(Icons.notifications_active_rounded),
-              label: const Text('Call Waiter'),
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                _buildStatusHeader(order, currentStep),
+                const SizedBox(height: 40),
+                _buildProgressSteps(currentIndex),
+                const SizedBox(height: 40),
+                _buildOrderDetails(order),
+                const SizedBox(height: 32),
+                if (order.status == 'served')
+                  GoldButton(
+                    text: 'Order Again',
+                    icon: Icons.restart_alt_rounded,
+                    onPressed: () {
+                      final tableId = ref.read(currentTableProvider);
+                      context.go('/menu?table=$tableId');
+                    },
+                  ).animate().fadeIn(),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () => _notifyWaiter(),
+                  icon: const Icon(Icons.notifications_active_rounded),
+                  label: const Text('Call Waiter'),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold)),
+        error: (e, _) => Center(child: Text('Error: $e')),
       ),
     );
   }
 
-  Widget _buildStatusHeader() {
-    final step = _steps[_currentStepIndex.clamp(0, _steps.length - 1)];
+  void _notifyWaiter() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Waiter has been notified!'),
+        backgroundColor: AppColors.surfaceLight,
+      ),
+    );
+  }
+
+  Widget _buildStatusHeader(models.Order order, _StatusStep step) {
     return Column(
       children: [
         Container(
-          width: 120,
-          height: 120,
+          width: 100,
+          height: 100,
           decoration: BoxDecoration(
             color: step.color.withOpacity(0.12),
             shape: BoxShape.circle,
             border: Border.all(color: step.color.withOpacity(0.3), width: 3),
           ),
-          child: Icon(step.icon, size: 56, color: step.color),
-        )
-            .animate()
-            .scale(begin: const Offset(0.8, 0.8), duration: 600.ms, curve: Curves.elasticOut)
-            .fadeIn(),
-
+          child: Icon(step.icon, size: 48, color: step.color),
+        ).animate().scale(duration: 600.ms, curve: Curves.elasticOut).fadeIn(),
         const SizedBox(height: 20),
-
         Text(
-          step.title,
-          style: TextStyle(
-            color: step.color,
-            fontSize: 26,
+          order.status == 'cancelled' ? 'Order Cancelled' : step.title,
+          style: GoogleFonts.playfairDisplay(
+            color: order.status == 'cancelled' ? AppColors.error : step.color,
+            fontSize: 28,
             fontWeight: FontWeight.w700,
           ),
         ).animate().fadeIn(delay: 200.ms),
-
         const SizedBox(height: 4),
-
         Text(
-          step.subtitle,
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+          order.status == 'cancelled' ? 'We apologize for the inconvenience' : step.subtitle,
+          style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 14),
         ).animate().fadeIn(delay: 300.ms),
       ],
     );
   }
 
-  Widget _buildProgressSteps() {
+  Widget _buildProgressSteps(int currentIndex) {
     return Column(
       children: _steps.asMap().entries.map((entry) {
         final index = entry.key;
         final step = entry.value;
-        final isCompleted = index <= _currentStepIndex;
-        final isCurrent = index == _currentStepIndex;
+        final isCompleted = index <= currentIndex;
+        final isCurrent = index == currentIndex;
 
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Timeline
             Column(
               children: [
                 Container(
-                  width: 36,
-                  height: 36,
+                  width: 32,
+                  height: 32,
                   decoration: BoxDecoration(
                     color: isCompleted ? step.color.withOpacity(0.2) : AppColors.surfaceLight,
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isCompleted ? step.color : AppColors.textHint.withOpacity(0.3),
-                      width: 2,
-                    ),
+                    border: Border.all(color: isCompleted ? step.color : AppColors.textHint.withOpacity(0.3), width: 2),
                   ),
-                  child: Icon(
-                    isCompleted ? Icons.check : step.icon,
-                    color: isCompleted ? step.color : AppColors.textHint,
-                    size: 18,
-                  ),
+                  child: Icon(isCompleted ? Icons.check : step.icon, color: isCompleted ? step.color : AppColors.textHint, size: 16),
                 ),
                 if (index < _steps.length - 1)
-                  Container(
-                    width: 2,
-                    height: 40,
-                    color: isCompleted ? step.color.withOpacity(0.4) : AppColors.surfaceLight,
-                  ),
+                  Container(width: 2, height: 36, color: isCompleted ? step.color.withOpacity(0.4) : AppColors.surfaceLight),
               ],
             ),
-
             const SizedBox(width: 16),
-
-            // Text
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.only(top: 6),
+                padding: const EdgeInsets.only(top: 4),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       step.title,
-                      style: TextStyle(
+                      style: GoogleFonts.poppins(
                         color: isCurrent ? step.color : (isCompleted ? AppColors.textPrimary : AppColors.textHint),
                         fontSize: 16,
                         fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
@@ -301,10 +216,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
                     ),
                     Text(
                       step.subtitle,
-                      style: TextStyle(
-                        color: isCompleted ? AppColors.textSecondary : AppColors.textHint,
-                        fontSize: 12,
-                      ),
+                      style: GoogleFonts.poppins(color: isCompleted ? AppColors.textSecondary : AppColors.textHint, fontSize: 12),
                     ),
                   ],
                 ),
@@ -314,6 +226,43 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
         ).animate(delay: (150 * index).ms).fadeIn().slideX(begin: 0.1);
       }).toList(),
     );
+  }
+
+  Widget _buildOrderDetails(models.Order order) {
+    return GlassContainer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Order Items', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+              Text('#${order.id}', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textHint)),
+            ],
+          ),
+          const Divider(height: 24, color: AppColors.surfaceLight),
+          ...order.items.map((item) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Text('${item.quantity}x', style: GoogleFonts.poppins(color: AppColors.gold, fontWeight: FontWeight.w700, fontSize: 13)),
+                const SizedBox(width: 12),
+                Expanded(child: Text(item.itemName, style: GoogleFonts.poppins(color: AppColors.textPrimary, fontSize: 14))),
+                Text('${(item.itemPrice * item.quantity).toStringAsFixed(0)} ${AppConstants.currency}', style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 13)),
+              ],
+            ),
+          )),
+          const Divider(height: 24, color: AppColors.surfaceLight),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Total Amount', style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 14)),
+              Text('${order.total.toStringAsFixed(0)} ${AppConstants.currency}', style: GoogleFonts.poppins(color: AppColors.gold, fontWeight: FontWeight.w700, fontSize: 18)),
+            ],
+          ),
+        ],
+      ),
+    ).animate(delay: 400.ms).fadeIn();
   }
 }
 

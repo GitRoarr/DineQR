@@ -149,7 +149,7 @@ class ApiService {
 
   Future<bool> updateOrderStatus(int orderId, String status) async {
     try {
-      await _dio.put('/orders/$orderId/status/', data: {'status': status});
+      await _dio.patch('/orders/$orderId/status/', data: {'status': status});
       return true;
     } catch (e) {
       return false;
@@ -207,7 +207,7 @@ class ApiService {
 
   Future<Map<String, dynamic>?> getAnalytics() async {
     try {
-      final response = await _dio.get('/admin/analytics/');
+      final response = await _dio.get('/orders/dashboard/');
       return response.data;
     } catch (e) {
       return null;

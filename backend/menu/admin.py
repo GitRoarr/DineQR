@@ -13,8 +13,8 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(MenuItem)
 class MenuItemAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'price', 'is_available', 'is_popular', 'preparation_time')
-    list_filter = ('category', 'is_available', 'is_popular')
+    list_display = ('name', 'category', 'price', 'available', 'is_popular', 'preparation_time')
+    list_filter = ('category', 'available', 'is_popular')
     search_fields = ('name', 'description')
-    list_editable = ('price', 'is_available', 'is_popular')
+    list_editable = ('price', 'available', 'is_popular')
     ordering = ('category', 'name')

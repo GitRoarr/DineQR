@@ -126,11 +126,14 @@ final cartItemCountProvider = Provider<int>((ref) {
 
 // ─── ORDERS ───────────────────────────────────────────────────
 
-final currentOrderProvider = StateProvider<Order?>((ref) => null);
-
 final tableOrdersProvider = FutureProvider.family<List<Order>, int>((ref, tableId) async {
   final api = ref.read(apiServiceProvider);
   return api.getTableOrders(tableId);
+});
+
+final orderProvider = FutureProvider.family<Order?, int>((ref, orderId) async {
+  final api = ref.read(apiServiceProvider);
+  return api.getOrder(orderId);
 });
 
 // ─── KITCHEN ──────────────────────────────────────────────────
@@ -138,6 +141,13 @@ final tableOrdersProvider = FutureProvider.family<List<Order>, int>((ref, tableI
 final kitchenOrdersProvider = FutureProvider<List<Order>>((ref) async {
   final api = ref.read(apiServiceProvider);
   return api.getKitchenOrders();
+});
+
+// ─── ADMIN ───────────────────────────────────────────────────
+
+final adminDashboardProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
+  final api = ref.read(apiServiceProvider);
+  return api.getAnalytics();
 });
 
 // ─── AUTH ─────────────────────────────────────────────────────

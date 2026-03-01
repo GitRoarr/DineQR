@@ -101,10 +101,11 @@ class Order(models.Model):
 
     def calculate_totals(self):
         """Calculate subtotal, service charge, and total from order items."""
+        from decimal import Decimal
         self.subtotal = sum(
             item.quantity * item.unit_price for item in self.items.all()
         )
-        self.service_charge = self.subtotal * 0.10  # 10% service charge
+        self.service_charge = self.subtotal * Decimal('0.10')  # 10% service charge
         self.total = self.subtotal + self.service_charge
         self.save(update_fields=['subtotal', 'service_charge', 'total'])
 
