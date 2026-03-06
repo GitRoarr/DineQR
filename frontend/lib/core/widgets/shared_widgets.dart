@@ -44,6 +44,7 @@ class GoldButton extends StatelessWidget {
   final bool isLoading;
   final double? width;
   final IconData? icon;
+  final bool compact;
 
   const GoldButton({
     super.key,
@@ -52,13 +53,14 @@ class GoldButton extends StatelessWidget {
     this.isLoading = false,
     this.width,
     this.icon,
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: width ?? double.infinity,
-      height: 56,
+      height: compact ? 44 : 56,
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: AppColors.goldGradient,

@@ -12,5 +12,6 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class LoginSerializer(serializers.Serializer):
-    username = serializers.CharField()
+    # Accept email or username for staff login.
+    identifier = serializers.CharField()
     password = serializers.CharField()

@@ -3,6 +3,8 @@ class Order {
   final int id;
   final int tableId;
   final int tableNumber;
+  final String orderNumber;
+  final String paymentStatus;
   final String status;
   final double total;
   final List<OrderItemData> items;
@@ -12,6 +14,8 @@ class Order {
     required this.id,
     required this.tableId,
     this.tableNumber = 0,
+    this.orderNumber = '',
+    this.paymentStatus = 'unpaid',
     required this.status,
     required this.total,
     required this.items,
@@ -23,6 +27,8 @@ class Order {
       id: json['id'] ?? 0,
       tableId: json['table'] ?? 0,
       tableNumber: json['table_number'] ?? 0,
+      orderNumber: json['order_number'] ?? '',
+      paymentStatus: json['payment_status'] ?? 'unpaid',
       status: json['status'] ?? 'pending',
       total: (json['total'] ?? 0).toDouble(),
       items: (json['items'] as List?)
@@ -36,6 +42,8 @@ class Order {
   Map<String, dynamic> toJson() {
     return {
       'table': tableId,
+      'order_number': orderNumber,
+      'payment_status': paymentStatus,
       'status': status,
       'total': total,
       'items': items.map((e) => e.toJson()).toList(),

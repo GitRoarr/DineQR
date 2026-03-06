@@ -9,7 +9,11 @@ from .views import (
     TableOrdersView,
     UpdateOrderStatusView,
     KitchenOrdersView,
+    CashierOrdersView,
     AdminDashboardView,
+    CreatePaymentIntentView,
+    MarkOrderPaidView,
+    StripeConfigView,
 )
 
 urlpatterns = [
@@ -23,10 +27,18 @@ urlpatterns = [
     path('create/', CreateOrderView.as_view(), name='order-create'),
     path('<int:pk>/', OrderDetailView.as_view(), name='order-detail'),
     path('<int:pk>/status/', UpdateOrderStatusView.as_view(), name='order-status-update'),
+    path('<int:pk>/create-payment-intent/', CreatePaymentIntentView.as_view(), name='create-payment-intent'),
+    path('<int:pk>/mark-paid/', MarkOrderPaidView.as_view(), name='order-mark-paid'),
     path('table/<int:table_id>/', TableOrdersView.as_view(), name='table-orders'),
 
     # Kitchen
     path('kitchen/', KitchenOrdersView.as_view(), name='kitchen-orders'),
+
+    # Cashier
+    path('cashier/', CashierOrdersView.as_view(), name='cashier-orders'),
+
+    # Stripe
+    path('stripe-config/', StripeConfigView.as_view(), name='stripe-config'),
 
     # Admin Dashboard
     path('dashboard/', AdminDashboardView.as_view(), name='admin-dashboard'),

@@ -44,25 +44,26 @@ class _SplashScreenState extends State<SplashScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Animated QR Icon
+              // App Logo
               Container(
-                width: 120,
-                height: 120,
+                width: 140,
+                height: 140,
                 decoration: BoxDecoration(
-                  gradient: AppColors.goldGradient,
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(32),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.gold.withOpacity(0.3),
-                      blurRadius: 30,
-                      spreadRadius: 5,
+                      color: AppColors.gold.withOpacity(0.25),
+                      blurRadius: 40,
+                      spreadRadius: 8,
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.qr_code_scanner_rounded,
-                  size: 64,
-                  color: AppColors.background,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(32),
+                  child: Image.asset(
+                    'assets/images/dineqr_logo.png',
+                    fit: BoxFit.cover,
+                  ),
                 ),
               )
                   .animate()

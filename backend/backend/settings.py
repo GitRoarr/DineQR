@@ -29,6 +29,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'channels',
+    'cloudinary',
+    'cloudinary_storage',
 
     # Local apps
     'users.apps.UsersConfig',
@@ -160,7 +162,27 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
+# Media (served from Cloudinary)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+
+CLOUDINARY_CLOUD_NAME = os.getenv('CLOUDINARY_CLOUD_NAME')
+CLOUDINARY_API_KEY = os.getenv('CLOUDINARY_API_KEY')
+CLOUDINARY_API_SECRET = os.getenv('CLOUDINARY_API_SECRET')
+
+if CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET:
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': CLOUDINARY_CLOUD_NAME,
+        'API_KEY': CLOUDINARY_API_KEY,
+        'API_SECRET': CLOUDINARY_API_SECRET,
+    }
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+else:
+    # Fallback to local media storage if Cloudinary is not configured
+    MEDIA_ROOT = BASE_DIR / 'media'
+
+# ─── STRIPE ───────────────────────────────────────────────────
+
+STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY')
+STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

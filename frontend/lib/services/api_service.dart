@@ -4,8 +4,8 @@ import '../core/constants/app_constants.dart';
 import '../models/category.dart';
 import '../models/menu_item.dart';
 import '../models/order.dart';
+import '../models/table.dart';
 
-/// API Service — handles all HTTP communication with Django backend
 class ApiService {
   late final Dio _dio;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
@@ -51,10 +51,10 @@ class ApiService {
 
   // ─── AUTH ───────────────────────────────────────────────────
 
-  Future<Map<String, dynamic>?> login(String username, String password) async {
+  Future<Map<String, dynamic>?> login(String identifier, String password) async {
     try {
       final response = await _dio.post('/auth/login/', data: {
-        'username': username,
+        'identifier': identifier,
         'password': password,
       });
       final data = response.data;
@@ -96,11 +96,18 @@ class ApiService {
 
   // ─── MENU ITEMS ────────────────────────────────────────────
 
-  Future<List<MenuItem>> getMenuItems({int? categoryId}) async {
+  Future<List<MenuItem>> getMenuItems({int? categoryId, bool showAll = false}) async {
     try {
       String url = '/menu/items/';
+      final params = <String, String>{};
       if (categoryId != null) {
-        url += '?category=$categoryId';
+        params['category'] = categoryId.toString();
+      }
+      if (showAll) {
+        params['all'] = 'true';
+      }
+      if (params.isNotEmpty) {
+        url += '?${params.entries.map((e) => '${e.key}=${e.value}').join('&')}';
       }
       final response = await _dio.get(url);
       return (response.data as List).map((e) => MenuItem.fromJson(e)).toList();
@@ -124,6 +131,15 @@ class ApiService {
     try {
       final response = await _dio.post('/orders/create/', data: data);
       return Order.fromJson(response.data);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<RestaurantTable?> getTableByNumber(int number) async {
+    try {
+      final response = await _dio.get('/orders/tables/number/$number/');
+      return RestaurantTable.fromJson(response.data);
     } catch (e) {
       return null;
     }
@@ -164,6 +180,110 @@ class ApiService {
       return (response.data as List).map((e) => Order.fromJson(e)).toList();
     } catch (e) {
       return [];
+    }
+  }
+
+  // ─── CASHIER ───────────────────────────────────────────────
+
+  Future<List<Order>> getCashierOrders({String paymentStatus = 'unpaid'}) async {
+    try {
+      final response = await _dio.get('/orders/cashier/', queryParameters: {
+        'payment_status': paymentStatus,
+      });
+      return (response.data as List).map((e) => Order.fromJson(e)).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<bool> markOrderPaid(int orderId, {String paymentMethod = 'cash'}) async {
+    try {
+      await _dio.post('/orders/$orderId/mark-paid/', data: {
+        'payment_method': paymentMethod,
+      });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ─── STRIPE / PAYMENTS ──────────────────────────────────────
+
+  /// Get the Stripe publishable key from the backend
+  Future<String?> getStripePublishableKey() async {
+    try {
+      final response = await _dio.get('/orders/stripe-config/');
+      return response.data['publishable_key'];
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Create a Stripe PaymentIntent for an order and return the client_secret
+  Future<String?> createPaymentIntent(int orderId) async {
+    try {
+      final response = await _dio.post('/orders/$orderId/create-payment-intent/');
+      return response.data['client_secret'];
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // ─── TABLES ──────────────────────────────────────────────────
+
+  Future<List<RestaurantTable>> getTables() async {
+    try {
+      final response = await _dio.get('/orders/tables/');
+      return (response.data as List).map((e) => RestaurantTable.fromJson(e)).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<bool> createTable(Map<String, dynamic> data) async {
+    try {
+      await _dio.post('/orders/tables/', data: data);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteTable(int id) async {
+    try {
+      await _dio.delete('/orders/tables/$id/');
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> generateQrCode(int tableId) async {
+    try {
+      await _dio.post('/orders/tables/$tableId/generate-qr/');
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ─── CATEGORIES (ADMIN) ─────────────────────────────────────
+
+  Future<bool> deleteCategory(int id) async {
+    try {
+      await _dio.delete('/menu/categories/$id/');
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> updateCategory(int id, Map<String, dynamic> data) async {
+    try {
+      await _dio.put('/menu/categories/$id/', data: data);
+      return true;
+    } catch (e) {
+      return false;
     }
   }
 

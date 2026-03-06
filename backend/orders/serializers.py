@@ -43,7 +43,7 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = [
             'id', 'order_number', 'table', 'table_number', 'table_name',
-            'status', 'status_display', 'payment_status',
+            'status', 'status_display', 'payment_status', 'payment_method',
             'subtotal', 'service_charge', 'total',
             'notes', 'customer_name', 'estimated_time',
             'items', 'items_count',
@@ -68,6 +68,11 @@ class OrderCreateSerializer(serializers.Serializer):
     table_id = serializers.IntegerField()
     customer_name = serializers.CharField(required=False, allow_blank=True, default='')
     notes = serializers.CharField(required=False, allow_blank=True, default='')
+    payment_method = serializers.ChoiceField(
+        choices=Order.PAYMENT_METHOD_CHOICES,
+        required=False,
+        default='cash',
+    )
     items = OrderItemCreateSerializer(many=True)
 
     def validate_table_id(self, value):
@@ -92,6 +97,7 @@ class OrderCreateSerializer(serializers.Serializer):
             table=table,
             customer_name=validated_data.get('customer_name', ''),
             notes=validated_data.get('notes', ''),
+            payment_method=validated_data.get('payment_method', 'cash'),
         )
 
         for item_data in items_data:
@@ -124,7 +130,7 @@ class OrderStatusUpdateSerializer(serializers.Serializer):
         order = self.context.get('order')
         if order:
             valid_transitions = {
-                'pending': ['confirmed', 'cancelled'],
+                'pending': ['confirmed', 'cooking', 'cancelled'],
                 'confirmed': ['cooking', 'cancelled'],
                 'cooking': ['ready', 'cancelled'],
                 'ready': ['served'],

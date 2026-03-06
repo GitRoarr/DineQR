@@ -13,6 +13,9 @@ import '../features/order_tracking/order_tracking_screen.dart';
 import '../features/kitchen/kitchen_screen.dart';
 import '../features/admin/admin_dashboard_screen.dart';
 import '../features/admin/menu_management_screen.dart';
+import '../features/admin/tables_screen.dart';
+import '../features/admin/categories_screen.dart';
+import '../features/cashier/cashier_screen.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -80,6 +83,11 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const KitchenScreen(),
     ),
     GoRoute(
+      path: '/cashier',
+      name: 'cashier',
+      builder: (context, state) => const CashierScreen(),
+    ),
+    GoRoute(
       path: '/admin',
       name: 'admin',
       builder: (context, state) => const AdminDashboardScreen(),
@@ -88,6 +96,16 @@ final GoRouter appRouter = GoRouter(
       path: '/admin/menu',
       name: 'admin-menu',
       builder: (context, state) => const MenuManagementScreen(),
+    ),
+    GoRoute(
+      path: '/admin/tables',
+      name: 'admin-tables',
+      builder: (context, state) => const TablesScreen(),
+    ),
+    GoRoute(
+      path: '/admin/categories',
+      name: 'admin-categories',
+      builder: (context, state) => const CategoriesScreen(),
     ),
   ],
 );

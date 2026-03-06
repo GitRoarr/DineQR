@@ -62,7 +62,12 @@ class MenuItemListView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        items = MenuItem.objects.filter(available=True).select_related('category')
+        items = MenuItem.objects.select_related('category')
+
+        # By default only show available items; admin can pass ?all=true
+        show_all = request.query_params.get('all')
+        if show_all != 'true':
+            items = items.filter(available=True)
 
         # Filter by category
         category_id = request.query_params.get('category')

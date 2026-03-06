@@ -30,8 +30,8 @@ dependencies:
   lottie: ^3.1.0
   flutter_animate: ^4.5.0
 
-  # Realtime
-  socket_io_client: ^2.0.3+1
+  # Realtime (Django Channels WebSocket)
+  web_socket_channel: ^2.4.0
 
   # UI
   google_fonts: ^6.1.0
@@ -40,6 +40,9 @@ dependencies:
   badges: ^3.1.2
   flutter_slidable: ^3.0.1
   smooth_page_indicator: ^1.1.0
+
+  # Payments
+  flutter_stripe: ^10.1.1
 
   # Utils
   intl: ^0.19.0
@@ -55,6 +58,14 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/dineqr_logo.png"
+  adaptive_icon_background: "#0A0A0A"
+  adaptive_icon_foreground: "assets/images/dineqr_logo.png"
 
 flutter:
   uses-material-design: true

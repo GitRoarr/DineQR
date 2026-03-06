@@ -81,10 +81,7 @@ pip install -r requirements.txt
 # Run migrations
 python manage.py migrate
 
-# Seed sample data
-python ../scripts/seed_data.py
-
-# Create superuser (if not using seed)
+# Create superuser
 python manage.py createsuperuser
 
 # Run development server
@@ -114,9 +111,6 @@ docker-compose up -d
 
 # Run migrations inside container
 docker-compose exec backend python manage.py migrate
-
-# Seed data
-docker-compose exec backend python ../scripts/seed_data.py
 ```
 
 ---
@@ -219,16 +213,6 @@ DineQR/
 |-----|-------------|
 | `ws://host/ws/orders/` | Kitchen order stream |
 | `ws://host/ws/orders/<table>/` | Table-specific updates |
-
----
-
-## 🔐 Default Credentials (Seed Data)
-
-| Role | Username | Password |
-|------|----------|----------|
-| Admin | `admin` | `admin123` |
-| Kitchen | `kitchen` | `kitchen123` |
-| Waiter | `waiter` | `waiter123` |
 
 ---
 

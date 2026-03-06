@@ -5,6 +5,8 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from datetime import timedelta
+import stripe
+from django.conf import settings
 
 from .models import Table, Order, OrderItem
 from .serializers import (
@@ -13,6 +15,9 @@ from .serializers import (
     OrderCreateSerializer,
     OrderStatusUpdateSerializer,
 )
+
+
+stripe.api_key = getattr(settings, 'STRIPE_SECRET_KEY', None)
 
 
 class TableListView(generics.ListCreateAPIView):
@@ -211,6 +216,100 @@ class KitchenOrdersView(APIView):
 
         serializer = OrderSerializer(orders, many=True)
         return Response(serializer.data)
+
+
+class CashierOrdersView(APIView):
+    """Get orders for cashier dashboard (focus on unpaid/active)."""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        status_filter = request.query_params.get('status')
+        payment_status = request.query_params.get('payment_status')
+
+        orders = Order.objects.all().select_related('table').prefetch_related('items__menu_item')
+
+        # By default, cashier sees non-cancelled orders
+        orders = orders.exclude(status__in=['cancelled'])
+
+        if status_filter:
+            orders = orders.filter(status=status_filter)
+
+        if payment_status:
+            orders = orders.filter(payment_status=payment_status)
+
+        serializer = OrderSerializer(orders, many=True)
+        return Response(serializer.data)
+
+
+class CreatePaymentIntentView(APIView):
+    """Create a Stripe PaymentIntent for an order (card payment)."""
+    permission_classes = [AllowAny]
+
+    def post(self, request, pk):
+        if not stripe.api_key:
+            return Response(
+                {"error": "Stripe is not configured on the server."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        try:
+            order = Order.objects.get(pk=pk)
+        except Order.DoesNotExist:
+            return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Amount in cents
+        amount = int(order.total * 100)
+
+        try:
+            intent = stripe.PaymentIntent.create(
+                amount=amount,
+                currency="usd",
+                metadata={"order_id": order.id},
+            )
+        except stripe.error.StripeError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Mark that this order is intended to be paid by card
+        if order.payment_method != 'card':
+            order.payment_method = 'card'
+            order.save(update_fields=['payment_method'])
+
+        return Response({"client_secret": intent.client_secret})
+
+
+class MarkOrderPaidView(APIView):
+    """Mark an order as paid (cash or card) after successful payment."""
+    permission_classes = [AllowAny]
+
+    def post(self, request, pk):
+        try:
+            order = Order.objects.get(pk=pk)
+        except Order.DoesNotExist:
+            return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        payment_method = request.data.get('payment_method', 'cash')
+        if payment_method not in dict(Order.PAYMENT_METHOD_CHOICES):
+            return Response({"error": "Invalid payment method."}, status=status.HTTP_400_BAD_REQUEST)
+
+        order.payment_status = 'paid'
+        order.payment_method = payment_method
+        order.save(update_fields=['payment_status', 'payment_method'])
+
+        return Response(OrderSerializer(order).data)
+
+
+class StripeConfigView(APIView):
+    """Return the Stripe publishable key to the frontend."""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        publishable_key = getattr(settings, 'STRIPE_PUBLISHABLE_KEY', '')
+        if not publishable_key:
+            return Response(
+                {"error": "Stripe is not configured."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        return Response({"publishable_key": publishable_key})
 
 
 class AdminDashboardView(APIView):

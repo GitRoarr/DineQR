@@ -5,6 +5,7 @@ import '../models/category.dart';
 import '../models/menu_item.dart';
 import '../models/cart_item.dart';
 import '../models/order.dart';
+import '../models/table.dart';
 
 // ─── SERVICES ─────────────────────────────────────────────────
 
@@ -13,6 +14,10 @@ final socketServiceProvider = Provider<SocketService>((ref) => SocketService());
 
 // ─── TABLE STATE ──────────────────────────────────────────────
 
+/// Table ID (primary key) — used for API calls (order creation, etc.)
+final currentTableIdProvider = StateProvider<int?>((ref) => null);
+
+/// Table number — used for display and WebSocket group
 final currentTableProvider = StateProvider<int?>((ref) => null);
 
 // ─── CATEGORIES ───────────────────────────────────────────────
@@ -136,6 +141,13 @@ final orderProvider = FutureProvider.family<Order?, int>((ref, orderId) async {
   return api.getOrder(orderId);
 });
 
+// ─── ADMIN MENU (shows all items including unavailable) ──────
+
+final adminMenuItemsProvider = FutureProvider<List<MenuItem>>((ref) async {
+  final api = ref.read(apiServiceProvider);
+  return api.getMenuItems(showAll: true);
+});
+
 // ─── KITCHEN ──────────────────────────────────────────────────
 
 final kitchenOrdersProvider = FutureProvider<List<Order>>((ref) async {
@@ -143,11 +155,25 @@ final kitchenOrdersProvider = FutureProvider<List<Order>>((ref) async {
   return api.getKitchenOrders();
 });
 
+// ─── CASHIER ──────────────────────────────────────────────────
+
+final cashierOrdersProvider = FutureProvider<List<Order>>((ref) async {
+  final api = ref.read(apiServiceProvider);
+  return api.getCashierOrders();
+});
+
 // ─── ADMIN ───────────────────────────────────────────────────
 
 final adminDashboardProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
   final api = ref.read(apiServiceProvider);
   return api.getAnalytics();
+});
+
+// ─── TABLES ──────────────────────────────────────────────────
+
+final tablesProvider = FutureProvider<List<RestaurantTable>>((ref) async {
+  final api = ref.read(apiServiceProvider);
+  return api.getTables();
 });
 
 // ─── AUTH ─────────────────────────────────────────────────────

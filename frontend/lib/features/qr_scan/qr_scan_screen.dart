@@ -17,6 +17,7 @@ class _QRScanScreenState extends ConsumerState<QRScanScreen> {
   MobileScannerController? _cameraController;
   bool _isScanned = false;
   bool _flashOn = false;
+  bool _isVerifying = false;
 
   @override
   void initState() {
@@ -33,22 +34,61 @@ class _QRScanScreenState extends ConsumerState<QRScanScreen> {
     super.dispose();
   }
 
-  void _onDetect(BarcodeCapture capture) {
-    if (_isScanned) return;
+  Future<void> _onDetect(BarcodeCapture capture) async {
+    if (_isScanned || _isVerifying) return;
     final List<Barcode> barcodes = capture.barcodes;
     for (final barcode in barcodes) {
       final value = barcode.rawValue;
-      if (value != null && value.startsWith('DINEQR_TABLE_')) {
-        setState(() => _isScanned = true);
-        final tableId = int.tryParse(value.replaceAll('DINEQR_TABLE_', ''));
-        if (tableId != null) {
-          ref.read(currentTableProvider.notifier).state = tableId;
+      if (value == null) continue;
 
-          // Show success animation
-          _showSuccessDialog(tableId);
-        }
+      final tableNumber = _extractTableNumber(value);
+      if (tableNumber == null) continue;
+
+      setState(() => _isVerifying = true);
+
+      final api = ref.read(apiServiceProvider);
+      final table = await api.getTableByNumber(tableNumber);
+
+      if (!mounted) return;
+
+      setState(() => _isVerifying = false);
+
+      if (table != null) {
+        setState(() => _isScanned = true);
+        ref.read(currentTableIdProvider.notifier).state = table.id;
+        ref.read(currentTableProvider.notifier).state = table.number;
+
+        // Show success animation
+        _showSuccessDialog(table.number);
+        break;
+      } else {
+        _showErrorSnackBar('Table not found or inactive.');
       }
     }
+  }
+
+  int? _extractTableNumber(String value) {
+    // Pattern 1: custom token, e.g. "DINEQR_TABLE_5"
+    if (value.startsWith('DINEQR_TABLE_')) {
+      return int.tryParse(value.replaceFirst('DINEQR_TABLE_', ''));
+    }
+
+    // Pattern 2: URL containing /table/<id>, e.g. "https://host/table/5"
+    final uri = Uri.tryParse(value);
+    if (uri != null) {
+      final segments = uri.pathSegments;
+      if (segments.length >= 2 && segments[segments.length - 2] == 'table') {
+        return int.tryParse(segments.last);
+      }
+    }
+
+    return null;
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   void _showSuccessDialog(int tableId) {
@@ -237,16 +277,18 @@ class _QRScanScreenState extends ConsumerState<QRScanScreen> {
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: AppColors.glassBorder),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.qr_code_2, color: AppColors.gold, size: 28),
-                            SizedBox(width: 12),
-                            Text(
-                              'Point camera at table QR code',
-                              style: TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 14,
+                            const Icon(Icons.qr_code_2, color: AppColors.gold, size: 28),
+                            const SizedBox(width: 12),
+                            Flexible(
+                              child: const Text(
+                                'Point camera at table QR code',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 14,
+                                ),
                               ),
                             ),
                           ],
@@ -254,19 +296,6 @@ class _QRScanScreenState extends ConsumerState<QRScanScreen> {
                       ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.3),
 
                       const SizedBox(height: 16),
-
-                      // Demo button (for testing without QR)
-                      TextButton.icon(
-                        onPressed: () {
-                          ref.read(currentTableProvider.notifier).state = 1;
-                          context.go('/menu?table=1');
-                        },
-                        icon: const Icon(Icons.table_restaurant, size: 18),
-                        label: const Text('Demo: Enter as Table 1'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.textHint,
-                        ),
-                      ),
                     ],
                   ),
                 ),

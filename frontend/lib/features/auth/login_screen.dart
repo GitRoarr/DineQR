@@ -14,7 +14,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _usernameController = TextEditingController();
+  final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -22,7 +22,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _identifierController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -35,7 +35,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     final api = ref.read(apiServiceProvider);
     final result = await api.login(
-      _usernameController.text.trim(),
+      _identifierController.text.trim(),
       _passwordController.text,
     );
 
@@ -46,6 +46,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       if (role == 'kitchen') {
         context.go('/kitchen');
+      } else if (role == 'cashier') {
+        context.go('/cashier');
       } else if (role == 'admin') {
         context.go('/admin');
       } else {
@@ -53,7 +55,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } else {
       setState(() {
-        _error = 'Invalid username or password';
+        _error = 'Invalid email or password';
         _isLoading = false;
       });
     }
@@ -76,16 +78,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   children: [
                     Container(
-                      width: 80,
-                      height: 80,
+                      width: 90,
+                      height: 90,
                       decoration: BoxDecoration(
-                        gradient: AppColors.goldGradient,
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.gold.withOpacity(0.2),
+                            blurRadius: 20,
+                            spreadRadius: 4,
+                          ),
+                        ],
                       ),
-                      child: const Icon(
-                        Icons.qr_code_scanner_rounded,
-                        size: 44,
-                        color: AppColors.background,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(22),
+                        child: Image.asset(
+                          'assets/images/dineqr_logo.png',
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ).animate().scale(duration: 600.ms, curve: Curves.elasticOut),
                     const SizedBox(height: 20),
@@ -113,7 +123,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
               // Username
               const Text(
-                'Username',
+                'Email or Username',
                 style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 14,
@@ -122,10 +132,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               const SizedBox(height: 8),
               TextField(
-                controller: _usernameController,
+                controller: _identifierController,
                 style: const TextStyle(color: AppColors.textPrimary),
                 decoration: InputDecoration(
-                  hintText: 'Enter your username',
+                  hintText: 'Enter email or username',
                   prefixIcon: const Icon(Icons.person_outline, color: AppColors.textHint),
                   filled: true,
                   fillColor: AppColors.surfaceLight,

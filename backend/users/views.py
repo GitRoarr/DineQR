@@ -17,11 +17,20 @@ class LoginView(APIView):
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        identifier = serializer.validated_data['identifier']
+        password = serializer.validated_data['password']
 
-        user = authenticate(
-            username=serializer.validated_data['username'],
-            password=serializer.validated_data['password'],
-        )
+        user_obj = User.objects.filter(email__iexact=identifier).first()
+        if user_obj is None:
+            user_obj = User.objects.filter(username__iexact=identifier).first()
+
+        if user_obj is not None:
+            user = authenticate(
+                username=user_obj.username,
+                password=password,
+            )
+        else:
+            user = None
 
         if user is None:
             return Response(
